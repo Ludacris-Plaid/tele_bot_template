@@ -1,6 +1,7 @@
 import os
 import asyncio
 import requests
+from flask import Flask, request, jsonify
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from dotenv import load_dotenv
@@ -19,6 +20,25 @@ ITEMS = {
     "item2": {"name": "Forbidden Archive", "price_btc": 0.0002, "file_path": "items/archive.zip"}
 }
 
+# Flask app for Blockonomics callback
+app = Flask(__name__)
+
+@app.route('/blockonomics/callback', methods=['POST'])
+def blockonomics_callback():
+    try:
+        # Get the callback data
+        data = request.json
+        print(f"Received payment update: {data}")
+
+        # Process payment and update records (this will be added later)
+        # Here you will check for payment status, and perform actions like sending files to the user.
+
+        # Respond with success
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"status": "failure", "error": str(e)}), 500
+
+
 # Admin interface
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -26,10 +46,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You are not authorized to access this panel.")
         return
 
-    # Admin Stats - You can pull more dynamic stats here
-    stats = f"Total items: {len(ITEMS)}\nTotal revenue: 0 BTC"  # Placeholder for stats
+    stats = f"Total items: {len(ITEMS)}\nTotal revenue: 0 BTC"
 
-    # Displaying stats and options in "popup-like" format using inline keyboard
     keyboard = [
         [InlineKeyboardButton("View Item List", callback_data="view_items")],
         [InlineKeyboardButton("Add New Item", callback_data="add_item")],
@@ -39,6 +57,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(f"Admin Panel\n\n{stats}", reply_markup=reply_markup)
 
+
 # Handle Add Item
 async def add_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -46,25 +65,22 @@ async def add_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You are not authorized to add items.")
         return
 
-    # Asking for file name and price
     await update.message.reply_text("Please send the name of the new item.")
-
-    # Save the state to request further information
     context.user_data['action'] = 'add_item'
+
 
 async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('action') == 'add_item':
-        item_name = update.message.text  # Get item name
+        item_name = update.message.text
         await update.message.reply_text(f"Enter the file path for {item_name}:")
         context.user_data['item_name'] = item_name
         context.user_data['action'] = 'add_item_path'
         return
 
     if context.user_data.get('action') == 'add_item_path':
-        item_path = update.message.text  # Get file path
-        item_price = 0.0005  # Dummy value for now; You could extend this for more info
+        item_path = update.message.text
+        item_price = 0.0005
 
-        # Add the new item
         ITEMS[f"item{len(ITEMS)+1}"] = {
             'name': context.user_data['item_name'],
             'price_btc': item_price,
@@ -72,7 +88,8 @@ async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
 
         await update.message.reply_text(f"Item {context.user_data['item_name']} added successfully.")
-        context.user_data.clear()  # Clear temporary data
+        context.user_data.clear()
+
 
 # Remove Item
 async def remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -81,13 +98,13 @@ async def remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You are not authorized to remove items.")
         return
 
-    # List items for removal
     keyboard = [
         [InlineKeyboardButton(item['name'], callback_data=f"remove_{key}")] for key, item in ITEMS.items()
     ]
     keyboard.append([InlineKeyboardButton("Back", callback_data="back_to_main")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Select an item to remove:", reply_markup=reply_markup)
+
 
 async def confirm_remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -98,6 +115,7 @@ async def confirm_remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await query.message.reply_text("Item not found.")
 
+
 # Back to Main Menu
 async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -106,16 +124,15 @@ async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Back to main menu.", reply_markup=reply_markup)
 
+
 # Handle Button Callbacks
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    # Admin Panel button press
     if query.data == "admin_panel":
         await admin_panel(update, context)
 
-    # Add Item or Remove Item logic
     elif query.data == "add_item":
         await add_item(update, context)
     elif query.data == "remove_item":
@@ -125,6 +142,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "back_to_main":
         await back_to_main(update, context)
 
+
 # Main entry point
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -133,7 +151,12 @@ def main():
     app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CallbackQueryHandler(button_callback))
 
+    # Deploy Flask server for Blockonomics callback
     app.run_polling()
+
+    # Run Flask app for Blockonomics webhook
+    app_flask.run(debug=True, host="0.0.0.0", port=5000)
+
 
 if __name__ == "__main__":
     main()
