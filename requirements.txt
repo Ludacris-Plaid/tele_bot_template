@@ -3,3 +3,5 @@ requests
 python-dotenv
 python-telegram-bot[webhooks]
 Flask==2.1.2
+Werkzeug==2.0.3
+
