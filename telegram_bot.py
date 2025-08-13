@@ -1,7 +1,5 @@
 import os
-import asyncio
 import requests
-import threading
 from flask import Flask, request, jsonify
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -144,6 +142,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await back_to_main(update, context)
 
 
+# Webhook Configuration
+def set_webhook():
+    webhook_url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{TELEGRAM_TOKEN}"
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook?url={webhook_url}"
+    response = requests.get(url)
+    return response.text
+
+
 # Main entry point for Telegram bot
 def run_telegram_bot():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -152,8 +158,16 @@ def run_telegram_bot():
     app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CallbackQueryHandler(button_callback))
     
-    # Start the bot polling loop
-    app.run_polling()
+    # Set the webhook
+    set_webhook()
+
+    # Start Flask to handle incoming webhook requests
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=10000,
+        url_path=TELEGRAM_TOKEN,
+        webhook_url=f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{TELEGRAM_TOKEN}"
+    )
 
 
 # Flask app for Blockonomics callback (run Flask in a thread)
