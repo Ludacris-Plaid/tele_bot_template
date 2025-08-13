@@ -158,7 +158,7 @@ def run_telegram_bot():
 
 # Flask app for Blockonomics callback (run Flask in a thread)
 def run_flask():
-    app.run(debug=True, host="0.0.0.0", port=10000)
+    app.run(debug=False, host="0.0.0.0", port=10000, use_reloader=False)  # Disable reloader in production
 
 
 if __name__ == "__main__":
