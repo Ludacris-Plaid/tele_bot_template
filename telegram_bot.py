@@ -1,5 +1,6 @@
 import os
 import requests
+import threading  # <-- Add this import
 from flask import Flask, request, jsonify
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
