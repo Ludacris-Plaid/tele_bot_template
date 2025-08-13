@@ -2,3 +2,4 @@ python-telegram-bot==20.0
 requests
 python-dotenv
 python-telegram-bot[webhooks]
+Flask==2.1.2
