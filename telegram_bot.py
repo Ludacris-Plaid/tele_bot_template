@@ -1,6 +1,7 @@
 import os
 import asyncio
 import requests
+import threading
 from flask import Flask, request, jsonify
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -143,20 +144,27 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await back_to_main(update, context)
 
 
-# Main entry point
-def main():
+# Main entry point for Telegram bot
+def run_telegram_bot():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", admin_panel))
     app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CallbackQueryHandler(button_callback))
-
-    # Deploy Flask server for Blockonomics callback
+    
+    # Start the bot polling loop
     app.run_polling()
 
-    # Run Flask app for Blockonomics webhook
-    app_flask.run(debug=True, host="0.0.0.0", port=5000)
+
+# Flask app for Blockonomics callback (run Flask in a thread)
+def run_flask():
+    app.run(debug=True, host="0.0.0.0", port=10000)
 
 
 if __name__ == "__main__":
-    main()
+    # Run Flask and Telegram bot in separate threads
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
+    # Run Telegram bot
+    run_telegram_bot()
