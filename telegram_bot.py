@@ -1,6 +1,6 @@
 import os
 import requests
-import threading  # <-- Add this import
+import threading
 from flask import Flask, request, jsonify
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -23,21 +23,14 @@ ITEMS = {
 # Flask app for Blockonomics callback
 app = Flask(__name__)
 
-@app.route('/blockonomics/callback', methods=['POST'])
-def blockonomics_callback():
-    try:
-        # Get the callback data
-        data = request.json
-        print(f"Received payment update: {data}")
-
-        # Process payment and update records (this will be added later)
-        # Here you will check for payment status, and perform actions like sending files to the user.
-
-        # Respond with success
-        return jsonify({"status": "success"}), 200
-    except Exception as e:
-        return jsonify({"status": "failure", "error": str(e)}), 500
-
+@app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
+def webhook():
+    data = request.get_json()
+    print("Received data:", data)  # Log the incoming data
+    # Create a Telegram update object from the received data
+    update = Update.de_json(data, bot)
+    dispatcher.process_update(update)
+    return "OK", 200
 
 # Admin interface
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,7 +49,6 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(f"Admin Panel\n\n{stats}", reply_markup=reply_markup)
-
 
 # Handle Add Item
 async def add_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -90,7 +82,6 @@ async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Item {context.user_data['item_name']} added successfully.")
         context.user_data.clear()
 
-
 # Remove Item
 async def remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -115,7 +106,6 @@ async def confirm_remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await query.message.reply_text("Item not found.")
 
-
 # Back to Main Menu
 async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -123,7 +113,6 @@ async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Back to main menu.", reply_markup=reply_markup)
-
 
 # Handle Button Callbacks
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -142,14 +131,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "back_to_main":
         await back_to_main(update, context)
 
-
 # Webhook Configuration
 def set_webhook():
     webhook_url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{TELEGRAM_TOKEN}"
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook?url={webhook_url}"
     response = requests.get(url)
     return response.text
-
 
 # Main entry point for Telegram bot
 def run_telegram_bot():
@@ -169,7 +156,6 @@ def run_telegram_bot():
         url_path=TELEGRAM_TOKEN,
         webhook_url=f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{TELEGRAM_TOKEN}"
     )
-
 
 # Flask app for Blockonomics callback (run Flask in a thread)
 def run_flask():
