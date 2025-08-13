@@ -1,0 +1,17 @@
+{
+  "ebook_python": {
+    "name": "Python Basics eBook",
+    "price_btc": 5e-05,
+    "file_path": "items/python_basics.pdf"
+  },
+  "video_git": {
+    "name": "Git & GitHub Tutorial (MP4)",
+    "price_btc": 8e-05,
+    "file_path": "items/git_tutorial.mp4"
+  },
+  "template_resume": {
+    "name": "Professional Resume Template",
+    "price_btc": 2e-05,
+    "file_path": "items/resume_template.docx"
+  }
+}
